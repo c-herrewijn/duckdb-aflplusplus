@@ -75,7 +75,6 @@ jobs:
         env:
           GEN: ninja
           EXPORT_DYNAMIC_SYMBOLS: 1
-          CRASH_ON_ASSERT: 1
         shell: bash
         run: |
           make debug
