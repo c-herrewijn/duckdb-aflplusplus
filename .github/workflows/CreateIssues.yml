@@ -41,7 +41,7 @@ jobs:
       FUZZEROFDUCKSKEY: ${{ secrets.FUZZEROFDUCKSKEY }}
     steps:
       - name: Checkout duckdb_aflplusplus
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: duckdblabs/duckdb-aflplusplus
           path: duckdb_aflplusplus
@@ -49,7 +49,7 @@ jobs:
             scripts
 
       - name: Checkout duckdb-fuzzer
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: duckdb/duckdb-fuzzer
           path: duckdb-fuzzer
@@ -60,12 +60,14 @@ jobs:
         run: sudo apt-get update -y -qq && sudo apt-get install -y -qq ninja-build ccache mold
 
       - name: Checkout duckdb
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           repository: ${{ inputs.duckdbRepo }}
           ref: ${{ inputs.ref }}
           path: duckdb
+
+      - uses: ./duckdb/.github/actions/cleanup_runner
 
       - name: Setup Ccache
         uses: hendrikmuhs/ccache-action@main
@@ -80,7 +82,7 @@ jobs:
           make debug
 
       - name: download reproductions (created by previous job)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           pattern: ${{ inputs.fuzzer }}-${{ inputs.duckdb_sha }}*
           run-id: ${{ env.FUZZ_RUN_ID }}

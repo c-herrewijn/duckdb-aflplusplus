@@ -38,7 +38,7 @@ jobs:
           echo file format: $FILE_FORMAT
 
       - name: Checkout duckdb_aflplusplus
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: duckdblabs/duckdb-aflplusplus
           path: duckdb_aflplusplus
@@ -48,7 +48,7 @@ jobs:
             src
 
       - name: download fuzz-results (created by previous job)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ inputs.fuzzer }}-${{ inputs.duckdb_sha }}-fuzz_results
 
@@ -75,7 +75,7 @@ jobs:
       - run: tar -cvf reproductions.tar reproductions
 
       - name: Store reproductions as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ inputs.fuzzer }}-${{ inputs.duckdb_sha }}-reproductions
           path: reproductions.tar
