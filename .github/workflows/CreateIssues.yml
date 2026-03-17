@@ -55,10 +55,6 @@ jobs:
           path: duckdb-fuzzer
           token: ${{ secrets.FUZZEROFDUCKSKEY }}
 
-      - name: DuckDB Build Dependencies
-        shell: bash
-        run: sudo apt-get update -y -qq && sudo apt-get install -y -qq ninja-build ccache mold
-
       - name: Checkout duckdb
         uses: actions/checkout@v6
         with:
@@ -68,6 +64,10 @@ jobs:
           path: duckdb
 
       - uses: ./duckdb/.github/actions/cleanup_runner
+
+      - name: DuckDB Build Dependencies
+        shell: bash
+        run: sudo apt-get update -y -qq && sudo apt-get install -y -qq ninja-build ccache mold
 
       - name: Setup Ccache
         uses: hendrikmuhs/ccache-action@main
