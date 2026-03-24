@@ -12,7 +12,7 @@ on:
         required: true
         type: string
         # oldest usable ref: 4ebeb16350eb2f819d682c581490af460dd0c995
-        default: v1.4.0
+        default: v1.5.1
       fuzzer:
         description: "fuzz scenario"
         required: true
@@ -85,42 +85,48 @@ on:
         required: true
 
 jobs:
-  aflplusplus-fuzz-run:
-    uses: ./.github/workflows/AFLFuzzRun.yml
+  compile-duckdb:
+    uses: ./.github/workflows/CompileDuckDB.yml
     with:
       duckdbRepo: ${{ inputs.duckdbRepo }}
       ref: ${{ inputs.ref }}
-      fuzzer: ${{ inputs.fuzzer }}
-      # workaround for numerical inputs: https://github.com/orgs/community/discussions/67182#discussioncomment-8617964
-      fuzzTime: ${{ fromJson(inputs.fuzzTime) }}
-      cacheAFL: ${{ inputs.cacheAFL }}
-      cacheDuckDB: ${{ inputs.cacheDuckDB }}
-      createIssues: ${{ inputs.createIssues }}
 
-  process-fuzz-results:
-    needs: aflplusplus-fuzz-run
-    if: needs.aflplusplus-fuzz-run.outputs.num_crashes != '0' || needs.aflplusplus-fuzz-run.outputs.num_hangs != '0'
-    uses: ./.github/workflows/ProcessFuzzResults.yml
-    with:
-      fuzzer: ${{ inputs.fuzzer }}
-      duckdb_sha: ${{ needs.aflplusplus-fuzz-run.outputs.duckdb_sha }}
-      num_crashes: ${{ fromJson(needs.aflplusplus-fuzz-run.outputs.num_crashes) }}
-      num_hangs: ${{ fromJson(needs.aflplusplus-fuzz-run.outputs.num_hangs) }}
-      queue_length: ${{ fromJson(needs.aflplusplus-fuzz-run.outputs.queue_length) }}
-      file_format: ${{ needs.aflplusplus-fuzz-run.outputs.file_format }}
+  # aflplusplus-fuzz-run:
+  #   uses: ./.github/workflows/AFLFuzzRun.yml
+  #   with:
+  #     duckdbRepo: ${{ inputs.duckdbRepo }}
+  #     ref: ${{ inputs.ref }}
+  #     fuzzer: ${{ inputs.fuzzer }}
+  #     # workaround for numerical inputs: https://github.com/orgs/community/discussions/67182#discussioncomment-8617964
+  #     fuzzTime: ${{ fromJson(inputs.fuzzTime) }}
+  #     cacheAFL: ${{ inputs.cacheAFL }}
+  #     cacheDuckDB: ${{ inputs.cacheDuckDB }}
+  #     createIssues: ${{ inputs.createIssues }}
 
-  create_issues:
-    needs: [aflplusplus-fuzz-run, process-fuzz-results]
-    if: ${{ inputs.createIssues == 'YesIndeed' }}
-    uses: ./.github/workflows/CreateIssues.yml
-    with:
-      duckdbRepo: ${{ inputs.duckdbRepo }}
-      fuzzer: ${{ inputs.fuzzer }}
-      duckdb_sha:  ${{ needs.aflplusplus-fuzz-run.outputs.duckdb_sha }}
-      ref: ${{ inputs.ref }}
-      duckdb_version:  ${{ needs.aflplusplus-fuzz-run.outputs.duckdb_version }}
-      file_format: ${{ needs.aflplusplus-fuzz-run.outputs.file_format }}
-      num_crashes: ${{ fromJson(needs.aflplusplus-fuzz-run.outputs.num_crashes) }}
-      num_hangs: ${{ fromJson(needs.aflplusplus-fuzz-run.outputs.num_hangs) }}
-    secrets:
-      FUZZEROFDUCKSKEY: ${{ secrets.FUZZEROFDUCKSKEY }}
+  # process-fuzz-results:
+  #   needs: aflplusplus-fuzz-run
+  #   if: needs.aflplusplus-fuzz-run.outputs.num_crashes != '0' || needs.aflplusplus-fuzz-run.outputs.num_hangs != '0'
+  #   uses: ./.github/workflows/ProcessFuzzResults.yml
+  #   with:
+  #     fuzzer: ${{ inputs.fuzzer }}
+  #     duckdb_sha: ${{ needs.aflplusplus-fuzz-run.outputs.duckdb_sha }}
+  #     num_crashes: ${{ fromJson(needs.aflplusplus-fuzz-run.outputs.num_crashes) }}
+  #     num_hangs: ${{ fromJson(needs.aflplusplus-fuzz-run.outputs.num_hangs) }}
+  #     queue_length: ${{ fromJson(needs.aflplusplus-fuzz-run.outputs.queue_length) }}
+  #     file_format: ${{ needs.aflplusplus-fuzz-run.outputs.file_format }}
+
+  # create_issues:
+  #   needs: [aflplusplus-fuzz-run, process-fuzz-results]
+  #   if: ${{ inputs.createIssues == 'YesIndeed' }}
+  #   uses: ./.github/workflows/CreateIssues.yml
+  #   with:
+  #     duckdbRepo: ${{ inputs.duckdbRepo }}
+  #     fuzzer: ${{ inputs.fuzzer }}
+  #     duckdb_sha:  ${{ needs.aflplusplus-fuzz-run.outputs.duckdb_sha }}
+  #     ref: ${{ inputs.ref }}
+  #     duckdb_version:  ${{ needs.aflplusplus-fuzz-run.outputs.duckdb_version }}
+  #     file_format: ${{ needs.aflplusplus-fuzz-run.outputs.file_format }}
+  #     num_crashes: ${{ fromJson(needs.aflplusplus-fuzz-run.outputs.num_crashes) }}
+  #     num_hangs: ${{ fromJson(needs.aflplusplus-fuzz-run.outputs.num_hangs) }}
+  #   secrets:
+  #     FUZZEROFDUCKSKEY: ${{ secrets.FUZZEROFDUCKSKEY }}
