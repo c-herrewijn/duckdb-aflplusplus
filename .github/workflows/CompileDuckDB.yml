@@ -1,5 +1,17 @@
 name: Compile DuckDB
 on:
+  workflow_call:
+    inputs:
+      duckdbRepo:
+        description: "duckdb repository"
+        required: false
+        type: string
+        default: duckdb/duckdb
+      ref:
+        description: "duckdb branch, tag, or full-length SHA"
+        required: true
+        type: string
+
   workflow_dispatch:
     inputs:
       duckdbRepo:
