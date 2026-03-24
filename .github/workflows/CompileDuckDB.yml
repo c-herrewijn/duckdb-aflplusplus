@@ -37,6 +37,12 @@ jobs:
       DUCKDB_DIR: ${{ github.workspace }}/duckdb
       DUCKDB_AFLPLUSPLUS_DIR: ${{ github.workspace }}/duckdb_aflplusplus
     steps:
+      - name: print intpus
+        run: |
+          echo $GITHUB_SHA
+          echo ${{ inputs.duckdbRepo }}
+          echo ${{ inputs.ref }}
+
       - name: Checkout duckdb_aflplusplus
         uses: actions/checkout@v6
         with:
@@ -82,7 +88,6 @@ jobs:
 
       # https://github.com/AFLplusplus/AFLplusplus/blob/stable/GNUmakefile
       - name: Cache AFL++ binaries
-        if: ${{ inputs.cacheAFL }}
         id: cache-aflplusplus
         uses: actions/cache@v5
         with:
@@ -112,7 +117,6 @@ jobs:
           $CXX --version
 
       - name: Setup ccache
-        if: ${{ inputs.cacheDuckDB }}
         uses: hendrikmuhs/ccache-action@main
         with:
           key: ${{ github.job }}
@@ -128,7 +132,7 @@ jobs:
           USE_CCACHE=1 \
           duckdb-lib
 
-      - name: afl duckdb version
+      - name: duckdb version
         id: get_duckdb_version
         working-directory: ${{ env.DUCKDB_DIR }}
         run: |
@@ -136,20 +140,72 @@ jobs:
           echo "duckdb_version=$(./build/release/duckdb --version)" >> "$GITHUB_OUTPUT"
           echo "duckdb_sha=$(git -P log -n 1 --pretty=format:%H)" >> "$GITHUB_OUTPUT"
 
+      - name: rename duckdb binary
+        run: |
+            cp ${{ env.DUCKDB_DIR }}/build/release/duckdb duckdb-afl
+
       - name: Store DuckDB binary (compiled with AFL++)
         uses: actions/upload-artifact@v6
         with:
           name: ${{ inputs.ref }}-afl-duckdb-bin
-          path: duckdb/build/release/duckdb
+          path: duckdb-afl
 
 
-
-  test-duckdb-executable:
+  compile-duckdb:
     name: Compile DuckDB with AFL++ compiler
     runs-on: ubuntu-24.04
-    needs: compile-duckdb-afl
     steps:
-      - name: download duckdb afl++ binary (created by previous job)
+      - name: print intpus
+        run: |
+          echo $GITHUB_SHA
+          echo ${{ inputs.duckdbRepo }}
+          echo ${{ inputs.ref }}
+      - name: Checkout duckdb
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          repository: ${{ inputs.duckdbRepo }}
+          ref: ${{ inputs.ref }}
+          path: duckdb
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@main
+        with:
+          key: ${{ github.job }}
+
+      - name: Build DuckDB
+        working-directory: duckdb
+        env:
+          GEN: ninja
+          EXPORT_DYNAMIC_SYMBOLS: 1
+          BUILD_JEMALLOC: 1
+        shell: bash
+        run: |
+          make debug
+
+      - name: duckdb version
+        id: get_duckdb_version
+        working-directory: duckdb
+        run: |
+          ./build/debug/duckdb --version
+
+      - name: rename duckdb binary
+        run: |
+          cp duckdb/build/debug/duckdb duckdb-debug
+
+      - name: Store DuckDB binary
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.ref }}-duckdb-debug
+          path: duckdb-debug
+
+
+  test-duckdb-binaries:
+    name: Test DuckDB executable
+    runs-on: ubuntu-24.04
+    needs: [compile-duckdb-afl, compile-duckdb]
+    steps:
+      - name: download duckdb afl++ binary
         uses: actions/download-artifact@v6
         with:
           name: ${{ inputs.ref }}-afl-duckdb-bin
@@ -157,4 +213,14 @@ jobs:
       - name: test duckdb afl++ binary
         run: |
           ls -l
-          ${{ inputs.ref }}-afl-duckdb-bin --version
+          chmod +x duckdb-afl && ./duckdb-afl --version
+
+      - name: download debug duckdb binary
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ inputs.ref }}-duckdb-debug
+
+      - name: test duckdb debug binary
+        run: |
+          ls -l
+          chmod +x duckdb-debug && ./duckdb-debug --version
