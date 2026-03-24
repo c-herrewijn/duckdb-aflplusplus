@@ -100,6 +100,30 @@ jobs:
               ;;
           esac
 
+      - name: Checkout duckdb_aflplusplus
+        uses: actions/checkout@v6
+        with:
+          repository: duckdblabs/duckdb-aflplusplus
+          path: duckdb_aflplusplus
+
+      - name: Checkout aflplusplus
+        id: checkout-aflplusplus
+        uses: actions/checkout@v6
+        with:
+          repository: aflplusplus/aflplusplus
+          ref: v4.30c
+          path: aflplusplus
+
+      - name: Checkout duckdb
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          repository: ${{ inputs.duckdbRepo }}
+          ref: ${{ inputs.ref }}
+          path: duckdb
+
+      - uses: ./duckdb/.github/actions/cleanup_runner
+
       # https://github.com/AFLplusplus/AFLplusplus/blob/stable/docs/INSTALL.md
       - name: Install AFL++ dependencies
         run: |
@@ -111,28 +135,6 @@ jobs:
       - name: Install DuckDB dependencies
         run: |
           sudo apt-get install -y ninja-build
-
-      - name: Checkout duckdb_aflplusplus
-        uses: actions/checkout@v4
-        with:
-          repository: duckdblabs/duckdb-aflplusplus
-          path: duckdb_aflplusplus
-
-      - name: Checkout aflplusplus
-        id: checkout-aflplusplus
-        uses: actions/checkout@v4
-        with:
-          repository: aflplusplus/aflplusplus
-          ref: v4.30c
-          path: aflplusplus
-
-      - name: Checkout duckdb
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          repository: ${{ inputs.duckdbRepo }}
-          ref: ${{ inputs.ref }}
-          path: duckdb
 
       # /proc/sys/kernel/core_pattern needs to be adjusted, see:
       # https://github.com/AFLplusplus/AFLplusplus/blob/fb52b8edf86e12628df834f4bb144916b18a503d/src/afl-fuzz-init.c#L2476C1-L2489C70
@@ -149,7 +151,7 @@ jobs:
       - name: Cache AFL++ binaries
         if: ${{ inputs.cacheAFL }}
         id: cache-aflplusplus
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ${{ github.workspace }}/bin/afl*
@@ -249,7 +251,7 @@ jobs:
           tar -cf ${{ github.workspace }}/fuzz_results.tar fuzz_results/${{ inputs.fuzzer }}
 
       - name: Store fuzz result as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ inputs.fuzzer }}-${{ steps.get_duckdb_version.outputs.duckdb_sha }}-fuzz_results
           path: fuzz_results.tar
