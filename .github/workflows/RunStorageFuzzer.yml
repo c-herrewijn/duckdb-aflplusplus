@@ -35,6 +35,7 @@ on:
         # note: to create issues FUZZEROFDUCKSKEY is required (via workflow_call)
         options:
           - 'NotPossible'
+          - 'YesIndeed'
         default: 'NotPossible'
 
   workflow_call:
