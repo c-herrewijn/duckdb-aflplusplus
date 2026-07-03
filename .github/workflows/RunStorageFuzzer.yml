@@ -201,6 +201,17 @@ jobs:
           echo "duckdb_version=$(./build/release/duckdb --version)" >> "$GITHUB_OUTPUT"
           echo "duckdb_sha=$(git -P log -n 1 --pretty=format:%H)" >> "$GITHUB_OUTPUT"
 
+      - name: Compile Fuzz target
+        run: |
+          make -C $DUCKDB_AFLPLUSPLUS_DIR/src \
+          DUCKDB_DIR=$DUCKDB_DIR \
+          DUCKDB_AFLPLUSPLUS_DIR=$DUCKDB_AFLPLUSPLUS_DIR \
+          CC=$CC \
+          CXX=$CXX \
+          BUILD_JEMALLOC=1 \
+          USE_CCACHE=${{ inputs.cacheDuckDB && '1' || '0' }} \
+          $DUCKDB_AFLPLUSPLUS_DIR/build/duckdb_file_fuzzer
+
       - name: create corpus
         working-directory: ${{ env.DUCKDB_AFLPLUSPLUS_DIR }}
         run: |
@@ -218,7 +229,7 @@ jobs:
           -V ${{ inputs.fuzzTime }} \
           -i $DUCKDB_AFLPLUSPLUS_DIR/corpus/duckdbfiles \
           -o $DUCKDB_AFLPLUSPLUS_DIR/fuzz_results/storage_fuzzer \
-          -- $DUCKDB_DIR/build/release/duckdb -f @@
+          -- $DUCKDB_AFLPLUSPLUS_DIR/build/duckdb_file_fuzzer
 
       - name: Archive fuzz results
         run: |
