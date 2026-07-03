@@ -105,6 +105,7 @@ def run_sql(duckdb_cli, sql_statement_bytes, fuzzer_name) -> tuple[str, str]:
         case 0:
             exception_msg, stacktrace = "", ""
         case 1 if not is_internal_error(stderr):  # regular error
+            print(f"regular error:\n {stderr}", flush=True)
             exception_msg, stacktrace = "", ""
         case 1:  # internal error
             print_std_error(duckdb_cli, sql_statement_bytes, stderr)
@@ -115,8 +116,10 @@ def run_sql(duckdb_cli, sql_statement_bytes, fuzzer_name) -> tuple[str, str]:
             sig_name = signal.Signals(-returncode).name
             exception_msg = f"{sig_name}: {exception_msg}"
         case _ if timed_out:  # hang
+            print("hang")
             exception_msg, stacktrace = (f"{fuzzer_name} timed out after 300 s", "")
         case _:
+            print(f"return code: {returncode}", flush=True)
             raise ValueError(f"undefined return code: {returncode} (expected 0, 1, or negative values)")
     return (exception_msg, stacktrace)
 

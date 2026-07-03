@@ -23,6 +23,8 @@ def reproduce_storage_errors(storage_file_dir: Path, duckdb_cli: Path, max_one=F
     print(f"reproducing errors in {len(all_storage_files)} storage files in dir {storage_file_dir} ...")
     for repro_file_path in all_storage_files:
         sql_statement = f"ATTACH '{repro_file_path}' AS tmp_db (READ_ONLY); use tmp_db; show tables;"
+        print(f"reproducing file: {repro_file_path}, size: {repro_file_path.stat().st_size}", flush=True)
+        print(sql_statement, flush=True)
         exception_msg, stacktrace = fuzzer_helper.run_sql(duckdb_cli, sql_statement.encode(), 'storage_fuzzer')
         if exception_msg:
             # ignore duplicates error messages that only have different numbers (only keep different line numbers from assertion errors)
