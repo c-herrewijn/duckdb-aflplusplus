@@ -12,7 +12,7 @@ on:
         required: true
         type: string
         # oldest usable ref: 4ebeb16350eb2f819d682c581490af460dd0c995
-        default: v1.5.3
+        default: v1.5.4
       fuzzTime:
         description: "fuzz time (seconds)"
         required: true
@@ -200,6 +200,17 @@ jobs:
           echo "duckdb_version=$(./build/release/duckdb --version)" >> "$GITHUB_OUTPUT"
           echo "duckdb_sha=$(git -P log -n 1 --pretty=format:%H)" >> "$GITHUB_OUTPUT"
 
+      - name: Compile Fuzz target
+        run: |
+          make -C $DUCKDB_AFLPLUSPLUS_DIR/src \
+          DUCKDB_DIR=$DUCKDB_DIR \
+          DUCKDB_AFLPLUSPLUS_DIR=$DUCKDB_AFLPLUSPLUS_DIR \
+          CC=$CC \
+          CXX=$CXX \
+          BUILD_JEMALLOC=1 \
+          USE_CCACHE=${{ inputs.cacheDuckDB && '1' || '0' }} \
+          $DUCKDB_AFLPLUSPLUS_DIR/build/duckdb_file_fuzzer
+
       - name: create corpus
         working-directory: ${{ env.DUCKDB_AFLPLUSPLUS_DIR }}
         run: |
@@ -216,7 +227,7 @@ jobs:
           -V ${{ inputs.fuzzTime }} \
           -i $DUCKDB_AFLPLUSPLUS_DIR/corpus/duckdbfiles \
           -o $DUCKDB_AFLPLUSPLUS_DIR/fuzz_results/storage_fuzzer \
-          -- $DUCKDB_DIR/build/release/duckdb -f @@
+          -- $DUCKDB_AFLPLUSPLUS_DIR/build/duckdb_file_fuzzer
 
       - name: Archive fuzz results
         run: |
@@ -314,31 +325,35 @@ jobs:
         run: sudo apt-get update -y -qq && sudo apt-get install -y -qq ninja-build ccache mold
 
       - name: Setup Ccache
+        if: ${{ inputs.cacheDuckDB }}
         uses: hendrikmuhs/ccache-action@main
         with:
-          key: ${{ github.job }}
+          key: ${{ github.job }}-reproduction
 
-      - name: Build DuckDB debug to reproduce issues
+      - name: Build DuckDB to reproduce issues
         working-directory: duckdb
         env:
           GEN: ninja
+          BUILD_JSON: 1
+          BUILD_JEMALLOC: 1
           EXPORT_DYNAMIC_SYMBOLS: 1
           CRASH_ON_ASSERT: 1
+          EXTRA_CMAKE_VARIABLES: "-DBUILD_UNITTESTS=FALSE"
         shell: bash
         run: |
-          make debug
+          make release
 
       - name: DuckDB version
         working-directory: duckdb
         run: |
-          ./build/debug/duckdb --version
+          ./build/release/duckdb --version
 
       # note: fuzzer adds readme.txt to crash dir, which should be ignored
       - name: Post process DB files (fixup checksums)
         run: |
           crash_dir=${{ github.workspace }}/fuzz_results/storage_fuzzer/default/crashes
           echo "crash directory: $crash_dir"
-          rm -f $crash_dir/readme.txt
+          rm -f $crash_dir/README.txt
           echo "number of crashes: $(ls $crash_dir | wc -l | sed 's/^ *//')"
           for db_file in $(ls $crash_dir ); \
           do \
@@ -347,7 +362,7 @@ jobs:
           done
           hangs_dir=${{ github.workspace }}/fuzz_results/storage_fuzzer/default/hangs
           echo "hangs directory: $hangs_dir"
-          rm -f $hangs_dir/readme.txt
+          rm -f $hangs_dir/README.txt
           echo "number of hangs: $(ls $hangs_dir | wc -l | sed 's/^ *//')"
           for db_file in $(ls $hangs_dir ); \
           do \
@@ -369,5 +384,5 @@ jobs:
           git pull
           python3 ${{ github.workspace }}/duckdb_aflplusplus/scripts/register_issues/reproduce_and_file_storage_issues.py \
             ${{ github.workspace }}/fuzz_results/storage_fuzzer/default \
-            ${{ github.workspace }}/duckdb/build/debug/duckdb \
+            ${{ github.workspace }}/duckdb/build/release/duckdb \
             "."
